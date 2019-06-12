@@ -17,7 +17,7 @@ void StepperTask(void const * argument)
 //	convertMsgIntoRTU(ArmMachineMsg);
 	for(;;)
 	{
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 //		convertMsgIntoRTU(ArmMachineMsg);
 //		stepper_test();
 		osDelay(1000);

@@ -25,6 +25,7 @@
 #include "cmsis_os.h"
 #include "stepper_app.h"
 #include "iwdg.h"
+#include "serial_queue_app.h"
 
 
 /* Private includes ----------------------------------------------------------*/
@@ -131,6 +132,7 @@ void MX_FREERTOS_Init(void) {
   /* add threads, ... */
 	
 	StepperInit();
+	data_queue_task_init();
   /* USER CODE END RTOS_THREADS */
 
 }
@@ -149,7 +151,7 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-		HAL_IWDG_Refresh(&hiwdg);
+//		HAL_IWDG_Refresh(&hiwdg);
 		osDelay(10);
 //	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 //    osDelay(200);
@@ -170,8 +172,8 @@ void LedTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-    osDelay(20);
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+		osDelay(100);
   }
   /* USER CODE END LedTask */
 }

@@ -8,6 +8,7 @@
 #include <string.h>
 #include "usart.h"
 
+void data_queue_task_init(void);
 
 
 

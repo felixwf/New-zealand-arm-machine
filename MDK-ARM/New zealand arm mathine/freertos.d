@@ -49,3 +49,6 @@ new zealand arm mathine\freertos.o: .\APP\Stepper\stepper_msg.h
 new zealand arm mathine\freertos.o: ../Core/Inc/usart.h
 new zealand arm mathine\freertos.o: .\APP\Stepper\modbus_rtu.h
 new zealand arm mathine\freertos.o: ../Core/Inc/iwdg.h
+new zealand arm mathine\freertos.o: .\APP\Stepper\serial_queue_app.h
+new zealand arm mathine\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
+new zealand arm mathine\freertos.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h

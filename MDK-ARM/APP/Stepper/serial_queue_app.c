@@ -3,8 +3,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "serial_queue_app.h"
 
-osMessageQId dataRecQueueHandle;
-osMessageQId dataSendQueueHandle;
+/* 静态变量 ------------------------------------------------------------------*/
+static xQueueHandle dataSendQueueHandle = NULL;        //CAN发送队列
+static xQueueHandle dataRecQueueHandle = NULL;         //CAN接收队列
 osThreadId dataRecTaskHandle;
 osThreadId dataSendTaskHandle;
 
@@ -15,18 +16,38 @@ void ModBusCRC16(uint8_t* cmd, int len);
 void convertMsgIntoRTU(ArmMachine_TypeDef ArmMachineMsg, uint8_t *data1, uint8_t *data2, uint8_t *data3);
 
 
-
-void data_queue_init()
+void data_queue_task_init(void)
 {
-  /* definition and creation of dataRecQueue */
-	/* 用于存储来自步进电机的消息 */
-  osMessageQDef(dataRecQueue, 16, ArmMachine_TypeDef);
-  dataRecQueueHandle = osMessageCreate(osMessageQ(dataRecQueue), NULL);
+	/* 由于cmsis_os使得FreeRTOS的队列变得不好用，甚至有bug，此处暂且不使用队列功能实现 */
+//  /* definition and creation of dataRecQueue */
+//	/* 用于存储来自步进电机的消息 */
+//  osMessageQDef(dataRecQueue, 16, ArmMachine_TypeDef);
+//  dataRecQueueHandle = osMessageCreate(osMessageQ(dataRecQueue), NULL);
 
-  /* definition and creation of dataSendQueue */
-	/* 用于需要发送给步进电机的消息 */
-  osMessageQDef(dataSendQueue, 16, ArmMachine_TypeDef);
-  dataSendQueueHandle = osMessageCreate(osMessageQ(dataSendQueue), NULL);
+//  /* definition and creation of dataSendQueue */
+//	/* 用于需要发送给步进电机的消息 */
+//  osMessageQDef(dataSendQueue, 16, ArmMachine_TypeDef);
+//  dataSendQueueHandle = osMessageCreate(osMessageQ(dataSendQueue), NULL);
+  /* 创建队列 */
+  if(dataSendQueueHandle == NULL)
+  {
+    dataSendQueueHandle = xQueueCreate(16, sizeof(ArmMachine_TypeDef));
+//    if(dataSendQueueHandle == NULL)
+//    {
+////      printf("CANSendQueue create failed");
+//      return;                                    //创建发送队列失败
+//    }
+  }
+
+  if(dataRecQueueHandle == NULL)
+  {
+    dataRecQueueHandle = xQueueCreate(16, sizeof(ArmMachine_TypeDef));
+//    if(dataRecQueueHandle == NULL)
+//    {
+////      printf("CANRcvQueue create failed");
+//      return;                                    //创建接收队列失败
+//    }
+  }
 
 	osThreadDef(dataRecTask, StartDataRecQueueTask, osPriorityNormal, 0, 128);
 	dataRecTaskHandle = osThreadCreate(osThread(dataRecTask), NULL);
@@ -61,17 +82,18 @@ void StartDataRecQueueTask(void const * argument)
 /* USER CODE END Header_StartDefaultTask */
 void StartDataSendQueueTask(void const * argument)
 {
-
+  static ArmMachine_TypeDef msg;
+	uint8_t data1[41] = {0};
+	uint8_t data2[41] = {0};
+	uint8_t data3[41] = {0};
   for(;;)
   {
-		osEvent flag = osMessageGet(dataSendQueueHandle, 0xffff) ;
-		if(flag.status == osOK)
+		if(xQueueReceive(dataSendQueueHandle, &msg, 100) == pdTRUE)
 		{
-			uint8_t data1[41] = {0};
-			uint8_t data2[41] = {0};
-			uint8_t data3[41] = {0};
+			// 将最新的数据，转化为符合MODBUS-RTU协议以及步进电机对应功能的数组
 			convertMsgIntoRTU(ArmMachineMsg, data1, data2, data3);
 
+			// 发送三个步进电机的控制指令
 			HAL_UART_Transmit(&huart2, data1, 41, 0xFFFF);
 			HAL_UART_Transmit(&huart2, data2, 41, 0xFFFF);
 			HAL_UART_Transmit(&huart2, data3, 41, 0xFFFF);
@@ -81,13 +103,46 @@ void StartDataSendQueueTask(void const * argument)
 }
 
 /* 用于将指令添加到队列中，等待发送 */
-
 void RTUSend_Data(ArmMachine_TypeDef ArmMachineMsg)
 {
-	osMessagePut (dataSendQueueHandle, ArmMachineMsg, 0xffff); 
+  if(xQueueSend(dataSendQueueHandle, &ArmMachineMsg, 100) != pdPASS)
+  {                                              //加入队列失败
+//    printf("dataSendQueueHandle --> Adding item failed\r\n");
+  }
 }
 
+void RTURcv_DateFromISR(ArmMachine_TypeDef *msg)
+{
+  static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
 
+  if(NULL != dataRecQueueHandle)
+  {
+    xQueueSendFromISR(dataRecQueueHandle, msg, &xHigherPriorityTaskWoken);
+    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+  }
+}
+
+// 接收完成回调函数
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	uint8_t tmp[3] = {0x11, 0x22, 0x33};
+	if(huart->Instance == USART3)
+	{
+		HAL_UART_Transmit(&huart2, huart2.pRxBuffPtr, huart2.RxXferCount, 0xFFFF);
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+
+	}
+	if(huart->Instance == USART2)
+	{
+		HAL_UART_Transmit(&huart2, tmp, 3, 0xFFFF);
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+		osDelay(1000);
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+		osDelay(1000);
+	}
+	HAL_UART_Transmit(&huart2, tmp, 3, 0xFFFF);
+
+}
 
 
 	/* 使用“直接数据运行”
@@ -205,13 +260,6 @@ void convertMsgIntoRTU(ArmMachine_TypeDef ArmMachineMsg, uint8_t *data1, uint8_t
 	memcpy(&data1,RTU_baseMotor,sizeof(uint8_t)*41);
 	memcpy(&data2,RTU_updownMotor,sizeof(uint8_t)*41);
 	memcpy(&data3,RTU_armMotor,sizeof(uint8_t)*41);
-//	HAL_UART_Transmit(&huart3, RTU_armMotor, 41, 0xFFFF);		osDelay(100);
-
-//	HAL_UART_Transmit(&huart3, RTU_updownMotor, 41, 0xFFFF);		osDelay(100);
-
-//	HAL_UART_Transmit(&huart3, RTU_baseMotor, 41, 0xFFFF);		osDelay(100);
-
-
 }
 
 
