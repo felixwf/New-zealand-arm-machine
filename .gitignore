@@ -1,1 +1,11 @@
-MDK-ARM/New zealand arm mathine
+*.axf
+*.htm
+*.crf
+*.d
+*.dep
+*.hex
+*.iex
+*.map
+*.inp
+*.o
+*.sct
