@@ -3,6 +3,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "serial_queue_app.h"
 
+/* 功能介绍：
+	 1. 建立了两个队列，分别用于数据的发送和接收
+	 2. 建立了两个task，分别用于监控和处理两个队列
+	 3. 一个task用于监控队列1，一旦发现队列中有数据，就通过串口发送出去
+	 4. 另一个task用于在串口中断中接收到数据后，将其数据内容添加到队列2中
+ */
+
+
+
 /* 静态变量 ------------------------------------------------------------------*/
 static xQueueHandle dataSendQueueHandle = NULL;        //CAN发送队列
 static xQueueHandle dataRecQueueHandle = NULL;         //CAN接收队列
@@ -32,21 +41,11 @@ void data_queue_task_init(void)
   if(dataSendQueueHandle == NULL)
   {
     dataSendQueueHandle = xQueueCreate(16, sizeof(ArmMachine_TypeDef));
-//    if(dataSendQueueHandle == NULL)
-//    {
-////      printf("CANSendQueue create failed");
-//      return;                                    //创建发送队列失败
-//    }
   }
 
   if(dataRecQueueHandle == NULL)
   {
     dataRecQueueHandle = xQueueCreate(16, sizeof(ArmMachine_TypeDef));
-//    if(dataRecQueueHandle == NULL)
-//    {
-////      printf("CANRcvQueue create failed");
-//      return;                                    //创建接收队列失败
-//    }
   }
 
 	osThreadDef(dataRecTask, StartDataRecQueueTask, osPriorityNormal, 0, 128);
