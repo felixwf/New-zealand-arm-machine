@@ -9,6 +9,9 @@
 #include "usart.h"
 
 void data_queue_task_init(void);
+//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+//void RTUSend_Data(ArmMachine_TypeDef ArmMachineMsg);
+void ArmMachineSend_Data(ArmMachine_TypeDef ArmMachineMsg);
 
 
 

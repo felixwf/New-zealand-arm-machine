@@ -54,8 +54,8 @@
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 osThreadId ledTaskHandle;
-osMessageQId serialRecQueueHandle;
-osMessageQId serialSendQueueHandle;
+//osMessageQId serialRecQueueHandle;
+//osMessageQId serialSendQueueHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -108,12 +108,12 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* definition and creation of serialRecQueue */
-  osMessageQDef(serialRecQueue, 16, uint16_t);
-  serialRecQueueHandle = osMessageCreate(osMessageQ(serialRecQueue), NULL);
+//  osMessageQDef(serialRecQueue, 16, uint16_t);
+//  serialRecQueueHandle = osMessageCreate(osMessageQ(serialRecQueue), NULL);
 
   /* definition and creation of serialSendQueue */
-  osMessageQDef(serialSendQueue, 16, uint16_t);
-  serialSendQueueHandle = osMessageCreate(osMessageQ(serialSendQueue), NULL);
+//  osMessageQDef(serialSendQueue, 16, uint16_t);
+//  serialSendQueueHandle = osMessageCreate(osMessageQ(serialSendQueue), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -131,6 +131,8 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
 	
+//	printf("---------------------------------------\r\n");
+//	printf("Init --> MX_FREERTOS_Init()\r\n");
 	StepperInit();
 	data_queue_task_init();
   /* USER CODE END RTOS_THREADS */
@@ -151,10 +153,8 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-//		HAL_IWDG_Refresh(&hiwdg);
+		HAL_IWDG_Refresh(&hiwdg);
 		osDelay(10);
-//	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-//    osDelay(200);
   }
   /* USER CODE END StartDefaultTask */
 }
@@ -172,8 +172,9 @@ void LedTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+//		printf("Task --> LedTask()\r\n");
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-		osDelay(100);
+		osDelay(1000);
   }
   /* USER CODE END LedTask */
 }

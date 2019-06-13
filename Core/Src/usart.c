@@ -64,7 +64,6 @@ void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-
 }
 /* USART3 init function */
 
@@ -88,7 +87,6 @@ void MX_USART3_UART_Init(void)
 
 void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
-
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   if(uartHandle->Instance==USART1)
   {
@@ -114,9 +112,10 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* USART1 interrupt Init */
-    HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(USART1_IRQn, 14, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspInit 1 */
+		printf("HAL_UART1_MspInit()\r\n");
 
   /* USER CODE END USART1_MspInit 1 */
   }
@@ -144,9 +143,10 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* USART2 interrupt Init */
-    HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(USART2_IRQn, 13, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
   /* USER CODE BEGIN USART2_MspInit 1 */
+		printf("HAL_UART2_MspInit()\r\n");
 
   /* USER CODE END USART2_MspInit 1 */
   }
@@ -174,9 +174,10 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     /* USART3 interrupt Init */
-    HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(USART3_IRQn, 12, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
   /* USER CODE BEGIN USART3_MspInit 1 */
+		printf("HAL_UART3_MspInit()\r\n");
 
   /* USER CODE END USART3_MspInit 1 */
   }
@@ -248,7 +249,30 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 } 
 
 /* USER CODE BEGIN 1 */
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+PUTCHAR_PROTOTYPE
+{
+    //具体哪个串口可以更改huart1为其它串口
+    HAL_UART_Transmit(&huart2 , (uint8_t *)&ch, 1 , 0xffff);
+    return ch;
+}
 
+//#ifdef __GNUC__
+//#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+//#else
+//#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+//#endif
+//PUTCHAR_PROTOTYPE
+//{
+//    //具体哪个串口可以更改USART1为其它串口
+//    while ((USART2->SR & 0X40) == 0); //循环发送,直到发送完毕
+//    USART2->DR = (uint8_t) ch;
+//    return ch;
+//}
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

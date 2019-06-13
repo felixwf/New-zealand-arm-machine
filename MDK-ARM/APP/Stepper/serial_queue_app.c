@@ -13,46 +13,49 @@
 
 
 /* 静态变量 ------------------------------------------------------------------*/
-static xQueueHandle dataSendQueueHandle = NULL;        //CAN发送队列
-static xQueueHandle dataRecQueueHandle = NULL;         //CAN接收队列
-osThreadId dataRecTaskHandle;
-osThreadId dataSendTaskHandle;
+TaskHandle_t recTaskHandle;
+TaskHandle_t sendTaskHandle;
 
 
-void StartDataRecQueueTask(void const * argument);
-void StartDataSendQueueTask(void const * argument);
+void recTask(void *pvParameters);
+void sendTask(void *pvParameters);
 void ModBusCRC16(uint8_t* cmd, int len);
 void convertMsgIntoRTU(ArmMachine_TypeDef ArmMachineMsg, uint8_t *data1, uint8_t *data2, uint8_t *data3);
 
 
 void data_queue_task_init(void)
 {
-	/* 由于cmsis_os使得FreeRTOS的队列变得不好用，甚至有bug，此处暂且不使用队列功能实现 */
-//  /* definition and creation of dataRecQueue */
-//	/* 用于存储来自步进电机的消息 */
-//  osMessageQDef(dataRecQueue, 16, ArmMachine_TypeDef);
-//  dataRecQueueHandle = osMessageCreate(osMessageQ(dataRecQueue), NULL);
+	/* 由于cmsis_os使得FreeRTOS的队列变得不好用，甚至有bug，此处暂且使用FreeRTOS队列功能实现 */
+	BaseType_t xReturn;
 
-//  /* definition and creation of dataSendQueue */
-//	/* 用于需要发送给步进电机的消息 */
-//  osMessageQDef(dataSendQueue, 16, ArmMachine_TypeDef);
-//  dataSendQueueHandle = osMessageCreate(osMessageQ(dataSendQueue), NULL);
-  /* 创建队列 */
-  if(dataSendQueueHandle == NULL)
+  /* 创建任务 */
+//	xReturn = xTaskCreate((TaskFunction_t)	recTask,		// 任务函数
+//												(const char*)			"RecTask",	// 任务名称
+//												(uint16_t)				128,											// 任务堆栈大小
+//												(void*)						NULL,											// 传递给任务函数的参数
+//												(UBaseType_t)			3,												// 任务优先级
+//												(TaskHandle_t*)		&recTaskHandle);			// 任务句柄
+	xReturn = xTaskCreate(recTask, "RecTask", 256, NULL, 3,	&recTaskHandle);
+  if(pdPASS != xReturn)
   {
-    dataSendQueueHandle = xQueueCreate(16, sizeof(ArmMachine_TypeDef));
+		printf("recTask create failed\r\n");							
+    return;                                      //创建接收任务失败
   }
 
-  if(dataRecQueueHandle == NULL)
+//	xReturn = xTaskCreate((TaskFunction_t)	sendTask,		// 任务函数
+//												(const char*)			"sendTask",	// 任务名称
+//												(uint16_t)				128,											// 任务堆栈大小
+//												(void*)						NULL,											// 传递给任务函数的参数
+//												(UBaseType_t)			3,												// 任务优先级
+//												(TaskHandle_t*)		&sendTaskHandle);		// 任务句柄
+	xReturn = xTaskCreate(sendTask, "sendTask", 256, NULL, 3,	&sendTaskHandle);
+  if(pdPASS != xReturn)
   {
-    dataRecQueueHandle = xQueueCreate(16, sizeof(ArmMachine_TypeDef));
+		printf("sendTask create failed: %ld\r\n", xReturn);							
+    return;                                      //创建发送任务失败
   }
 
-	osThreadDef(dataRecTask, StartDataRecQueueTask, osPriorityNormal, 0, 128);
-	dataRecTaskHandle = osThreadCreate(osThread(dataRecTask), NULL);
-
-	osThreadDef(dataSendTask, StartDataSendQueueTask, osPriorityNormal, 0, 128);
-	dataSendTaskHandle = osThreadCreate(osThread(dataSendTask), NULL);
+//	printf("Init --> data_queue_task_init()\r\n");							
 }
 
 
@@ -63,12 +66,13 @@ void data_queue_task_init(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDataRecQueueTask(void const * argument)
+static void recTask(void *pvParameters)
 {
 
   for(;;)
   {
-		osDelay(10);
+//		printf("Task --> recTask()\r\n");
+		vTaskDelay(1000);
   }
 }
 
@@ -79,52 +83,54 @@ void StartDataRecQueueTask(void const * argument)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDataSendQueueTask(void const * argument)
+static void sendTask(void *pvParameters)
 {
-  static ArmMachine_TypeDef msg;
-	uint8_t data1[41] = {0};
-	uint8_t data2[41] = {0};
-	uint8_t data3[41] = {0};
   for(;;)
   {
-		if(xQueueReceive(dataSendQueueHandle, &msg, 100) == pdTRUE)
-		{
-			// 将最新的数据，转化为符合MODBUS-RTU协议以及步进电机对应功能的数组
-			convertMsgIntoRTU(ArmMachineMsg, data1, data2, data3);
-
-			// 发送三个步进电机的控制指令
-			HAL_UART_Transmit(&huart2, data1, 41, 0xFFFF);
-			HAL_UART_Transmit(&huart2, data2, 41, 0xFFFF);
-			HAL_UART_Transmit(&huart2, data3, 41, 0xFFFF);
-		}
-		osDelay(1);
+//		printf("Task --> sendTask()\r\n");
+		ArmMachineSend_Data(ArmMachineMsg);
+		vTaskDelay(1000);
   }
 }
 
 /* 用于将指令添加到队列中，等待发送 */
-void RTUSend_Data(ArmMachine_TypeDef ArmMachineMsg)
+void RTUSend_Data(uint8_t *data1, uint8_t *data2, uint8_t *data3)
 {
-  if(xQueueSend(dataSendQueueHandle, &ArmMachineMsg, 100) != pdPASS)
-  {                                              //加入队列失败
-//    printf("dataSendQueueHandle --> Adding item failed\r\n");
-  }
+	// 发送三个步进电机的控制指令
+	HAL_UART_Transmit(&huart2, data1, 41, 0xFFFF);
+	HAL_UART_Transmit(&huart2, data2, 41, 0xFFFF);
+	HAL_UART_Transmit(&huart2, data3, 41, 0xFFFF);
+//	printf("RTUSend_Data --> success\r\n");
+
 }
 
-void RTURcv_DateFromISR(ArmMachine_TypeDef *msg)
+void ArmMachineSend_Data(ArmMachine_TypeDef ArmMachineMsg)
 {
-  static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+	uint8_t data1[41] = {0};
+	uint8_t data2[41] = {0};
+	uint8_t data3[41] = {0};
 
-  if(NULL != dataRecQueueHandle)
-  {
-    xQueueSendFromISR(dataRecQueueHandle, msg, &xHigherPriorityTaskWoken);
-    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-  }
+	// 将最新的数据，转化为符合MODBUS-RTU协议以及步进电机对应功能的数组
+	convertMsgIntoRTU(ArmMachineMsg, data1, data2, data3);
+	RTUSend_Data(data1, data2, data3);
 }
+
+//void RTURcv_DateFromISR(ArmMachine_TypeDef *msg)
+//{
+//  static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+//  if(NULL != dataRecQueueHandle)
+//  {
+//    xQueueSendFromISR(dataRecQueueHandle, msg, &xHigherPriorityTaskWoken);
+//    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+//  }
+//}
 
 // 接收完成回调函数
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	uint8_t tmp[3] = {0x11, 0x22, 0x33};
+	printf("UART Callback --> HAL_UART_RxCpltCallback()");
 	if(huart->Instance == USART3)
 	{
 		HAL_UART_Transmit(&huart2, huart2.pRxBuffPtr, huart2.RxXferCount, 0xFFFF);
@@ -135,9 +141,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	{
 		HAL_UART_Transmit(&huart2, tmp, 3, 0xFFFF);
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-		osDelay(1000);
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-		osDelay(1000);
 	}
 	HAL_UART_Transmit(&huart2, tmp, 3, 0xFFFF);
 
@@ -256,9 +259,10 @@ void convertMsgIntoRTU(ArmMachine_TypeDef ArmMachineMsg, uint8_t *data1, uint8_t
 	};
 	ModBusCRC16(RTU_baseMotor, 39);
 	
-	memcpy(&data1,RTU_baseMotor,sizeof(uint8_t)*41);
-	memcpy(&data2,RTU_updownMotor,sizeof(uint8_t)*41);
-	memcpy(&data3,RTU_armMotor,sizeof(uint8_t)*41);
+	memcpy(data1,RTU_baseMotor,sizeof(uint8_t)*41);
+	memcpy(data2,RTU_updownMotor,sizeof(uint8_t)*41);
+	memcpy(data3,RTU_armMotor,sizeof(uint8_t)*41);
+//	printf("convertMsgIntoRTU --> success\r\n");
 }
 
 
@@ -300,97 +304,4 @@ void ModBusCRC16(uint8_t* cmd, int len)
 
 #endif
 
-/*
-	uint8_t RTU_armMotor[41] = {
-		ArmMachineMsg.armMotor.address,
-		0x10,
-		0x00, 0x58,
-		0x00, 0x10,
-		0x20,
-		0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, ArmMachineMsg.armMotor.mode == 'a' ? 0x01 : 0x02, // 绝对定位0x01 相对定位0x02
-		(uint8_t)(ArmMachineMsg.armMotor.targetPosition >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.targetPosition >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.targetPosition >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.targetPosition & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.topSpeed >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.topSpeed >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.topSpeed >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.topSpeed & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.startSlope >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.startSlope >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.startSlope >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.startSlope & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.stopSlope >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.stopSlope >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.stopSlope >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.armMotor.stopSlope & 0xff),
-		0x00, 0x00, 0x03, 0xe8,	// 100.0% full power
-		0x00, 0x00, 0x00, 0x01,
-		0x00, 0x00
-	};
-	ModBusCRC16(RTU_armMotor, 39);
 
-	uint8_t RTU_updownMotor[41] = {
-		ArmMachineMsg.updownMotor.address,
-		0x10,
-		0x00, 0x58,
-		0x00, 0x10,
-		0x20,
-		0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, ArmMachineMsg.updownMotor.mode == 'a' ? 0x01 : 0x02, // 绝对定位0x01 相对定位0x02
-		(uint8_t)(ArmMachineMsg.updownMotor.targetPosition >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.targetPosition >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.targetPosition >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.targetPosition & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.topSpeed >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.topSpeed >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.topSpeed >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.topSpeed & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.startSlope >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.startSlope >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.startSlope >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.startSlope & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.stopSlope >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.stopSlope >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.stopSlope >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.updownMotor.stopSlope & 0xff),
-		0x00, 0x00, 0x03, 0xe8,	// 100.0% full power
-		0x00, 0x00, 0x00, 0x01,
-		0x00, 0x00
-	};
-	ModBusCRC16(RTU_armMotor, 39);
-
-	uint8_t RTU_baseMotor[41] = {
-		ArmMachineMsg.baseMotor.address,
-		0x10,
-		0x00, 0x58,
-		0x00, 0x10,
-		0x20,
-		0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, ArmMachineMsg.baseMotor.mode == 'a' ? 0x01 : 0x02, // 绝对定位0x01 相对定位0x02
-		(uint8_t)(ArmMachineMsg.baseMotor.targetPosition >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.targetPosition >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.targetPosition >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.targetPosition & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.topSpeed >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.topSpeed >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.topSpeed >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.topSpeed & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.startSlope >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.startSlope >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.startSlope >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.startSlope & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.stopSlope >> 24 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.stopSlope >> 16 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.stopSlope >> 8 & 0xff),
-		(uint8_t)(ArmMachineMsg.baseMotor.stopSlope & 0xff),
-		0x00, 0x00, 0x03, 0xe8,	// 100.0% full power
-		0x00, 0x00, 0x00, 0x01,
-		0x00, 0x00
-	};
-	ModBusCRC16(RTU_armMotor, 39);
-	ModBusCRC16(RTU_updownMotor, 39);
-	ModBusCRC16(RTU_baseMotor, 39);
-
-*/

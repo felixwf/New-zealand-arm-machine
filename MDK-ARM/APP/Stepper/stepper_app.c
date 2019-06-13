@@ -9,6 +9,7 @@ void StepperInit(void)
 {
 	osThreadDef(stepperTask, StepperTask, osPriorityNormal, 0, 128);
 	stepperTaskHandle = osThreadCreate(osThread(stepperTask), NULL);
+//	printf("Init --> StepperInit()\r\n");
 }
 
 void StepperTask(void const * argument)
@@ -20,6 +21,7 @@ void StepperTask(void const * argument)
 //		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 //		convertMsgIntoRTU(ArmMachineMsg);
 //		stepper_test();
+//		printf("Task --> StepperTask()\r\n");
 		osDelay(1000);
 	}
 }
