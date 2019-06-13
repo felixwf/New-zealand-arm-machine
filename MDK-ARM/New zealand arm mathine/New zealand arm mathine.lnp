@@ -27,6 +27,7 @@
 "new zealand arm mathine\stm32f1xx_hal_pwr.o"
 "new zealand arm mathine\stm32f1xx_hal_flash.o"
 "new zealand arm mathine\stm32f1xx_hal_flash_ex.o"
+"new zealand arm mathine\stm32f1xx_hal_usart.o"
 "new zealand arm mathine\system_stm32f1xx.o"
 "new zealand arm mathine\croutine.o"
 "new zealand arm mathine\event_groups.o"

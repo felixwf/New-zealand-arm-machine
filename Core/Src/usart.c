@@ -32,7 +32,6 @@ UART_HandleTypeDef huart3;
 
 void MX_USART1_UART_Init(void)
 {
-
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
@@ -45,7 +44,6 @@ void MX_USART1_UART_Init(void)
   {
     Error_Handler();
   }
-
 }
 /* USART2 init function */
 
@@ -112,10 +110,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* USART1 interrupt Init */
-    HAL_NVIC_SetPriority(USART1_IRQn, 14, 0);
+    HAL_NVIC_SetPriority(USART1_IRQn, 12, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspInit 1 */
-		printf("HAL_UART1_MspInit()\r\n");
 
   /* USER CODE END USART1_MspInit 1 */
   }
@@ -143,10 +140,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* USART2 interrupt Init */
-    HAL_NVIC_SetPriority(USART2_IRQn, 13, 0);
+    HAL_NVIC_SetPriority(USART2_IRQn, 12, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
   /* USER CODE BEGIN USART2_MspInit 1 */
-		printf("HAL_UART2_MspInit()\r\n");
 
   /* USER CODE END USART2_MspInit 1 */
   }
@@ -177,7 +173,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_NVIC_SetPriority(USART3_IRQn, 12, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
   /* USER CODE BEGIN USART3_MspInit 1 */
-		printf("HAL_UART3_MspInit()\r\n");
 
   /* USER CODE END USART3_MspInit 1 */
   }
@@ -273,6 +268,54 @@ PUTCHAR_PROTOTYPE
 //    USART2->DR = (uint8_t) ch;
 //    return ch;
 //}
+
+/*
+void UART_Nvidiacom_Configuration(void)
+{
+  GPIO_InitTypeDef  GPIO_InitStructure;
+  UART_InitTypeDef USART_InitStructure;
+  NVIC_InitTypeDef  NVIC_InitStructure;
+
+  // 时钟配置 
+  RCC_APB2PeriphClockCmd(NVIDIA_COM_TX_GPIO_CLK | NVIDIA_COM_RX_GPIO_CLK , ENABLE);
+
+  if(USART1 == NVIDIA_COM)
+    RCC_APB2PeriphClockCmd(NVIDIA_COM_CLK, ENABLE);
+  else
+    RCC_APB1PeriphClockCmd(NVIDIA_COM_CLK, ENABLE);
+
+  // 引脚配置 
+  GPIO_InitStructure.GPIO_Pin = NVIDIA_COM_TX_PIN;                    //UART Tx
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_Init(NVIDIA_COM_TX_GPIO_PORT, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = NVIDIA_COM_RX_PIN;                    //UART Rx
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(NVIDIA_COM_RX_GPIO_PORT, &GPIO_InitStructure);
+
+  // NVIC配置 
+  NVIC_InitStructure.NVIC_IRQChannel = NVIDIA_COM_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIDIA_COM_Priority;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+
+  // UART配置 
+  USART_InitStructure.USART_BaudRate = NVIDIA_COM_BaudRate;           //波特率
+  USART_InitStructure.USART_WordLength = USART_WordLength_8b;        //传输位数
+  USART_InitStructure.USART_StopBits = USART_StopBits_1;             //停止位
+  USART_InitStructure.USART_Parity = USART_Parity_No ;               //校验位
+  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;    //收发功能
+  USART_Init(NVIDIA_COM, &USART_InitStructure);
+
+  USART_ClearFlag(NVIDIA_COM, USART_FLAG_RXNE | USART_FLAG_TC);
+  USART_ITConfig(NVIDIA_COM, USART_IT_RXNE, ENABLE);                  //接收中断
+
+  USART_Cmd(NVIDIA_COM, ENABLE);                                      //使能UART
+}
+*/
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

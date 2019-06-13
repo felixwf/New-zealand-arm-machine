@@ -174,6 +174,10 @@ void LedTask(void const * argument)
   {
 //		printf("Task --> LedTask()\r\n");
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_6);
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_7);
 		osDelay(1000);
   }
   /* USER CODE END LedTask */

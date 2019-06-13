@@ -97,11 +97,14 @@ static void sendTask(void *pvParameters)
 void RTUSend_Data(uint8_t *data1, uint8_t *data2, uint8_t *data3)
 {
 	// 发送三个步进电机的控制指令
-	HAL_UART_Transmit(&huart2, data1, 41, 0xFFFF);
-	HAL_UART_Transmit(&huart2, data2, 41, 0xFFFF);
-	HAL_UART_Transmit(&huart2, data3, 41, 0xFFFF);
-//	printf("RTUSend_Data --> success\r\n");
-
+	HAL_UART_Transmit(&huart3, data1, 41, 0xFFFF);
+	HAL_UART_Transmit(&huart3, data2, 41, 0xFFFF);
+	HAL_UART_Transmit(&huart3, data3, 41, 0xFFFF);
+	printf("RTUSend_Data --> success\r\n");
+	printf("huart1 status %x\r\n", HAL_UART_GetState(&huart1));
+	printf("huart2 status %x\r\n", HAL_UART_GetState(&huart2));
+	printf("huart3 status %x\r\n", HAL_UART_GetState(&huart3));
+	
 }
 
 void ArmMachineSend_Data(ArmMachine_TypeDef ArmMachineMsg)
@@ -115,37 +118,71 @@ void ArmMachineSend_Data(ArmMachine_TypeDef ArmMachineMsg)
 	RTUSend_Data(data1, data2, data3);
 }
 
-//void RTURcv_DateFromISR(ArmMachine_TypeDef *msg)
-//{
-//  static portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
-
-//  if(NULL != dataRecQueueHandle)
-//  {
-//    xQueueSendFromISR(dataRecQueueHandle, msg, &xHigherPriorityTaskWoken);
-//    portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-//  }
-//}
-
 // 接收完成回调函数
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	uint8_t tmp[3] = {0x11, 0x22, 0x33};
-	printf("UART Callback --> HAL_UART_RxCpltCallback()");
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 	if(huart->Instance == USART3)
 	{
-		HAL_UART_Transmit(&huart2, huart2.pRxBuffPtr, huart2.RxXferCount, 0xFFFF);
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 	}
 	if(huart->Instance == USART2)
 	{
-		HAL_UART_Transmit(&huart2, tmp, 3, 0xFFFF);
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
 	}
-	HAL_UART_Transmit(&huart2, tmp, 3, 0xFFFF);
-
+//	if(huart->Instance == USART1)
+//	{
+//		printf("UART1 Rx callback\r\n");
+//	}
+//	if(huart->Instance == USART2)
+//	{
+//		printf("UART2 Rx callback\r\n");
+//	}
+//	if(huart->Instance == USART3)
+//	{
+//		printf("UART3 Rx callback\r\n");
+//	}
+}
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance == USART3)
+	{
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+	}
+	if(huart->Instance == USART2)
+	{
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+	}
+//	if(huart->Instance == USART1)
+//	{
+//		printf("UART1 Tx callback\r\n");
+//	}
+//	if(huart->Instance == USART2)
+//	{
+//		printf("UART2 Tx callback\r\n");
+//	}
+//	if(huart->Instance == USART3)
+//	{
+//		printf("UART3 Tx callback\r\n");
+//	}
 }
 
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	
+	if(huart->Instance == USART1)
+	{
+		printf("UART1 error callback\r\n");
+	}
+	if(huart->Instance == USART2)
+	{
+		printf("UART2 error callback\r\n");
+	}
+	if(huart->Instance == USART3)
+	{
+		printf("UART3 error callback\r\n");
+	}
+}
 
 	/* 使用“直接数据运行”
 		号机号码： 01h ==> 1
